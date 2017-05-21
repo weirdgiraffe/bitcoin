@@ -17,6 +17,12 @@ import (
 
 type UnixTime uint32
 type Hash [32]byte
+type DoubleHash [32]byte
+
+type Block struct {
+	Header  BlockHeader
+	TxCount Varint
+}
 
 type BlockHeader struct {
 	Version    uint32
@@ -27,9 +33,34 @@ type BlockHeader struct {
 	Nonce      uint32
 }
 
-type Block struct {
-	Header  BlockHeader
-	TxCount uint64
+type TxIn struct {
+	PrevTx        DoubleHash
+	PrevTxOutIndx uint32
+	ScriptLen     Varint
+	Script        []byte
+	SequenceNum   uint32
+}
+
+type TxOut struct {
+	Value     [8]byte
+	ScriptLen Varint
+	Script    []byte
+}
+
+type Tx struct {
+	Verssion uint32
+	CountIn  Varint
+	In       []TxIn
+	CountOut Varint
+	Out      []TxOut
+	LockTime uint32
+}
+
+// IsCoinbase return true if this transaction is a generation transaction
+// i.e. input for this transaction is a new generated block
+func (t Tx) IsCoinbase() bool {
+	null := DoubleHash{}
+	return len(t.In) == 1 && bytes.Compare(null[:], t.In[0].PrevTx[:]) == 0
 }
 
 func LoadBlock(r io.Reader) (b *Block, err error) {
@@ -72,38 +103,6 @@ func verifyMagicNumber(r io.Reader) error {
 		return fmt.Errorf("magic not match %v != %v", magic, m)
 	}
 	return nil
-}
-
-func ReadVarint(r io.Reader, u *uint64) (err error) {
-	b := []byte{0}
-	_, err = r.Read(b)
-	if err != nil {
-		return
-	}
-	switch b[0] {
-	case 0xfd:
-		var s uint16
-		err = binary.Read(r, binary.LittleEndian, &s)
-		if err != nil {
-			return
-		}
-		*u = uint64(s)
-	case 0xfe:
-		var w uint32
-		err = binary.Read(r, binary.LittleEndian, &w)
-		if err != nil {
-			return
-		}
-		*u = uint64(w)
-	case 0xff:
-		err = binary.Read(r, binary.LittleEndian, r)
-		if err != nil {
-			return
-		}
-	default:
-		*u = uint64(b[0])
-	}
-	return
 }
 
 func (b Block) String() string {

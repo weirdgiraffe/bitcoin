@@ -9,7 +9,6 @@ package bitcoin
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -29,9 +28,8 @@ func TestLoadFile(t *testing.T) {
 		0xfd, 0x3d, 0x08, 0x01, 0x00, 0x00, 0x00, 0x01,
 		0x00, 0x00, 0x00, 0x00,
 	})
-	b, err := LoadBlock(r)
+	_, err := LoadBlock(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(b)
 }

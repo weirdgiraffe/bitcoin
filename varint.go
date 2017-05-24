@@ -9,6 +9,7 @@ package bitcoin
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
@@ -46,4 +47,38 @@ func ReadVarint(r io.Reader, u *Varint) (err error) {
 		*u = Varint(b[0])
 	}
 	return
+}
+
+type ScriptInt struct {
+	val int64
+}
+
+func ScriptIntFromSlice(b []byte) *ScriptInt {
+	if len(b) > 8 {
+		panic(fmt.Errorf("ScriptInt is bigger than int64"))
+	}
+	s := &ScriptInt{}
+	var offt uint = 0
+	for i := range b {
+		s.val |= (int64(b[i]) << offt)
+		offt += 8
+	}
+	return s
+}
+
+func (s ScriptInt) Int() int {
+	return int(s.val)
+}
+
+func (s ScriptInt) Bytes() []byte {
+	b := make([]byte, 8)
+	var offt uint = 0
+	for i := range b {
+		b[i] = byte((s.val >> offt) & 0xff)
+		offt += 8
+		if b[i] == 0 {
+			return b[:i]
+		}
+	}
+	return []byte{}
 }

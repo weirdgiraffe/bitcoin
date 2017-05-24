@@ -7,6 +7,42 @@
 
 package bitcoin
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
+// OpConstants implements all script operations that are constants
+// check https://en.bitcoin.it/wiki/Script#Constants
+//
+// return number of consumed bytes from script
+func OpConstants(op byte, script []byte, s *stack) (n int, err error) {
+	switch {
+	case op == OP_0:
+		s.PushSlice([]byte{})
+	case op < OP_PUSHDATA1:
+		n = int(op)
+		s.PushSlice(script[:n])
+	case op == OP_PUSHDATA1:
+		n = int(script[0]) + 1
+		s.PushSlice(script[1:n])
+	case op == OP_PUSHDATA2:
+		n = int(binary.LittleEndian.Uint16(script)) + 2
+		s.PushSlice(script[2:n])
+	case op == OP_PUSHDATA4:
+		n = int(binary.LittleEndian.Uint32(script)) + 4
+		s.PushSlice(script[4:n])
+	case op == OP_1NEGATE:
+		s.PushByte(0x81)
+	case OP_1 <= op && op <= OP_16:
+		b := op - OP_1 + 1
+		s.PushByte(b)
+	default:
+		err = fmt.Errorf("0x%02x not a Script Constants op")
+	}
+	return
+}
+
 const (
 	OP_0         = 0x00
 	OP_FALSE     = OP_0

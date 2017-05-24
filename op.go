@@ -43,6 +43,124 @@ func OpConstants(op byte, script []byte, s *stack) (n int, err error) {
 	return
 }
 
+// OpStack implements all script operations that are stack
+// check https://en.bitcoin.it/wiki/Script#Stack
+func OpStack(op byte, main, alt *stack) error {
+	switch op {
+	case OP_TOALTSTACK:
+		b1 := main.Pop()
+		alt.PushSlice(b1)
+	case OP_FROMALTSTACK:
+		b1 := alt.Pop()
+		main.PushSlice(b1)
+	case OP_IFDUP:
+		b1 := main.Top()
+		if slice2bool(b1) {
+			main.PushSlice(b1)
+		}
+	case OP_DEPTH:
+		n := main.ItemsCount()
+		main.PushSlice(n.Bytes())
+	case OP_DROP:
+		main.Pop()
+	case OP_DUP:
+		b1 := main.Top()
+		main.PushSlice(b1)
+	case OP_NIP:
+		b2 := main.Pop()
+		main.Pop()
+		main.PushSlice(b2)
+	case OP_OVER:
+		b2 := main.Pop()
+		b1 := main.Top()
+		main.PushSlice(b2)
+		main.PushSlice(b1)
+	case OP_PICK:
+		n := ScriptIntFromSlice(main.Pop()).Int()
+		bn := main.Item(n)
+		main.PushSlice(bn)
+	case OP_ROLL:
+		n := ScriptIntFromSlice(main.Pop()).Int()
+		b := make([][]byte, n)
+		for i := 0; i < n; i++ {
+			b[i] = main.Pop()
+		}
+		bn := main.Pop()
+		for i := n - 1; i >= 0; i-- {
+			main.PushSlice(b[i])
+		}
+		main.PushSlice(bn)
+	case OP_ROT:
+		b3 := main.Pop()
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b2)
+		main.PushSlice(b3)
+		main.PushSlice(b1)
+	case OP_SWAP:
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b2)
+		main.PushSlice(b1)
+	case OP_TUCK:
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b2)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+	case OP_2DROP:
+		main.Pop()
+		main.Pop()
+	case OP_2DUP:
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+	case OP_3DUP:
+		b3 := main.Pop()
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+		main.PushSlice(b3)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+		main.PushSlice(b3)
+	case OP_2OVER:
+		b2 := main.Item(2)
+		b1 := main.Item(3)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+	case OP_2ROT:
+		b6 := main.Pop()
+		b5 := main.Pop()
+		b4 := main.Pop()
+		b3 := main.Pop()
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b3)
+		main.PushSlice(b4)
+		main.PushSlice(b5)
+		main.PushSlice(b6)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+	case OP_2SWAP:
+		b4 := main.Pop()
+		b3 := main.Pop()
+		b2 := main.Pop()
+		b1 := main.Pop()
+		main.PushSlice(b3)
+		main.PushSlice(b4)
+		main.PushSlice(b1)
+		main.PushSlice(b2)
+	default:
+		return fmt.Errorf("0x%02x not a Script Stack op")
+	}
+	return nil
+}
+
 const (
 	OP_0         = 0x00
 	OP_FALSE     = OP_0

@@ -67,15 +67,97 @@ func TestOpConstants(t *testing.T) {
 		s.Reset()
 		n, err := OpConstants(tt[i].opcode, hex2byte(tt[i].script), s)
 		if err != nil {
-			t.Errorf("%02x%s error: %v", tt[i].opcode, tt[i].script, err)
+			t.Errorf("case #%d error: %v", i+1, err)
 		}
 		if n != len(tt[i].script)/2 {
-			t.Errorf("%02x%s consumed len mismatch %d != %d", tt[i].opcode, tt[i].script, len(tt[i].script)/2, n)
+			t.Errorf("case #%d consumed len mismatch %d != %d", i+1, len(tt[i].script)/2, n)
 		}
 		if compareStack(tt[i].expected, s) != 0 {
-			t.Errorf("%02x%s stack mismatch", tt[i].opcode, tt[i].script)
+			t.Errorf("case #%d main stack mismatch", i+1)
 			t.Errorf("expected[\n%s]", tt[i].expected)
 			t.Errorf("got[\n%s]", s)
+		}
+	}
+}
+
+func TestOpAltStack(t *testing.T) {
+	tt := []struct {
+		opcode      byte
+		iMain, iAlt *stack
+		eMain, eAlt *stack
+	}{
+		{
+			OP_TOALTSTACK,
+			StackWithValues("aa"), StackWithValues(),
+			StackWithValues(), StackWithValues("aa"),
+		},
+		{
+			OP_FROMALTSTACK,
+			StackWithValues(), StackWithValues("bb"),
+			StackWithValues("bb"), StackWithValues(),
+		},
+	}
+	for i := range tt {
+		err := OpStack(tt[i].opcode, tt[i].iMain, tt[i].iAlt)
+		if err != nil {
+			t.Errorf("case #%d error: %v", i+1, err)
+		}
+		if compareStack(tt[i].iMain, tt[i].eMain) != 0 {
+			t.Errorf("case #%d main stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].eMain)
+			t.Errorf("got[\n%s]", tt[i].iMain)
+		}
+		if compareStack(tt[i].iAlt, tt[i].eAlt) != 0 {
+			t.Errorf("case #%d alt stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].eAlt)
+			t.Errorf("got[\n%s]", tt[i].iAlt)
+		}
+	}
+}
+
+func TestOpStack(t *testing.T) {
+	tt := []struct {
+		op           byte
+		in, expected *stack
+	}{
+		{OP_IFDUP, StackWithValues("aa"), StackWithValues("aa", "aa")},
+		{OP_IFDUP, StackWithValues("aa", "00"), StackWithValues("aa", "00")},
+		{OP_DEPTH, StackWithValues("aa", "00"), StackWithValues("aa", "00", "02")},
+		{OP_DROP, StackWithValues("01", "02"), StackWithValues("01")},
+		{OP_DROP, StackWithValues("aa"), StackWithValues()},
+		{OP_DUP, StackWithValues("ab"), StackWithValues("ab", "ab")},
+		{OP_NIP, StackWithValues("01", "02"), StackWithValues("02")},
+		{OP_OVER, StackWithValues("01", "02"), StackWithValues("01", "02", "01")},
+		{OP_PICK, StackWithValues("01", "02", "03", "00"), StackWithValues("01", "02", "03", "03")},
+		{OP_PICK, StackWithValues("01", "02", "03", "01"), StackWithValues("01", "02", "03", "02")},
+		{OP_PICK, StackWithValues("01", "02", "03", "02"), StackWithValues("01", "02", "03", "01")},
+		{OP_ROLL, StackWithValues("01", "02", "03", "01"), StackWithValues("01", "03", "02")},
+		{OP_ROLL, StackWithValues("01", "02", "03", "02"), StackWithValues("02", "03", "01")},
+		{OP_ROT, StackWithValues("01", "02", "03"), StackWithValues("02", "03", "01")},
+		{OP_SWAP, StackWithValues("01", "02"), StackWithValues("02", "01")},
+		{OP_TUCK, StackWithValues("01", "02"), StackWithValues("02", "01", "02")},
+		{OP_2DROP, StackWithValues("01", "02"), StackWithValues()},
+		{OP_2DUP, StackWithValues("01", "02"), StackWithValues("01", "02", "01", "02")},
+		{OP_3DUP, StackWithValues("01", "02", "03"), StackWithValues("01", "02", "03", "01", "02", "03")},
+		{OP_2OVER, StackWithValues("01", "02", "03", "04"), StackWithValues("01", "02", "03", "04", "01", "02")},
+		{OP_2ROT, StackWithValues("01", "02", "03", "04", "05", "06"), StackWithValues("03", "04", "05", "06", "01", "02")},
+		{OP_2SWAP, StackWithValues("01", "02", "03", "04"), StackWithValues("03", "04", "01", "02")},
+	}
+	alt := &stack{}
+	for i := range tt {
+		alt.Reset()
+		err := OpStack(tt[i].op, tt[i].in, alt)
+		if err != nil {
+			t.Errorf("case #%d error: %v", i+1, err)
+		}
+		if compareStack(tt[i].in, tt[i].expected) != 0 {
+			t.Errorf("case #%d main stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].expected)
+			t.Errorf("got[\n%s]", tt[i].in)
+		}
+		if alt.ItemsCount().Int() != 0 {
+			t.Errorf("case #%d alt stack has items", i+1)
+			t.Errorf("\n%s", alt)
 		}
 	}
 }

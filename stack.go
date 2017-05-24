@@ -38,6 +38,10 @@ func (s *stack) Top() []byte {
 	return s.item[s.i]
 }
 
+func (s *stack) Item(n int) []byte {
+	return s.item[s.i-n]
+}
+
 func (s *stack) ItemsCount() ScriptInt {
 	return ScriptInt{int64(s.i + 1)}
 }

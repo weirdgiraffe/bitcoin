@@ -187,3 +187,33 @@ func TestOpSplice(t *testing.T) {
 		}
 	}
 }
+
+func TestOpBitwise(t *testing.T) {
+	tt := []struct {
+		op           byte
+		in, expected *stack
+		expect_err   bool
+	}{
+		{OP_EQUAL, StackWithValues("0102", "0102"), StackWithValues("01"), false},
+		{OP_EQUAL, StackWithValues("0102", "0103"), StackWithValues("00"), false},
+		{OP_EQUALVERIFY, StackWithValues("0102", "0102"), StackWithValues(), false},
+		{OP_EQUALVERIFY, StackWithValues("0102", "0103"), StackWithValues(), true},
+	}
+	alt := &stack{}
+	for i := range tt {
+		alt.Reset()
+		err := OpBitwise(tt[i].op, tt[i].in, alt)
+		if err != nil && tt[i].expect_err == false {
+			t.Fatalf("case #%d error: %v", i+1, err)
+		}
+		if compareStack(tt[i].in, tt[i].expected) != 0 {
+			t.Errorf("case #%d main stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].expected)
+			t.Errorf("got[\n%s]", tt[i].in)
+		}
+		if alt.ItemsCount().Int() != 0 {
+			t.Errorf("case #%d alt stack has items", i+1)
+			t.Errorf("\n%s", alt)
+		}
+	}
+}

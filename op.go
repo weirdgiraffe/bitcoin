@@ -8,9 +8,13 @@
 package bitcoin
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
+
+var InvalidTransaction = errors.New("Transacrion is invalid")
 
 // OpConstants implements all script operations that are constants
 // check https://en.bitcoin.it/wiki/Script#Constants
@@ -171,6 +175,30 @@ func OpSplice(op byte, main, alt *stack) error {
 		main.PushSlice(n.Bytes())
 	default:
 		return fmt.Errorf("0x%02x not a Script Splice op", op)
+	}
+	return nil
+}
+
+// OpBitwise implements all script operations that are Bitwise logic
+// check https://en.bitcoin.it/wiki/Script#Bitwise_logic
+func OpBitwise(op byte, main, alt *stack) error {
+	switch op {
+	case OP_EQUAL:
+		b1 := main.Pop()
+		b2 := main.Pop()
+		if bytes.Compare(b1, b2) == 0 {
+			main.PushByte(1)
+		} else {
+			main.PushByte(0)
+		}
+	case OP_EQUALVERIFY:
+		b1 := main.Pop()
+		b2 := main.Pop()
+		if bytes.Compare(b1, b2) != 0 {
+			return InvalidTransaction
+		}
+	default:
+		return fmt.Errorf("0x%02x not a Script Bitwise logic op", op)
 	}
 	return nil
 }

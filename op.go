@@ -9,9 +9,13 @@ package bitcoin
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
+
+	"golang.org/x/crypto/ripemd160"
 )
 
 var InvalidTransaction = errors.New("Transacrion is invalid")
@@ -354,6 +358,53 @@ func OpArithmetic(op byte, main, alt *stack) error {
 		}
 	default:
 		return fmt.Errorf("0x%02x not a Script Arithmetic op", op)
+	}
+	return nil
+}
+
+// OpCrypto implements all script operations that are Crypto
+// check https://en.bitcoin.it/wiki/Script#Crypto
+func OpCrypto(op byte, main, alt *stack) error {
+	switch op {
+	case OP_RIPEMD160:
+		h := ripemd160.New()
+		_, err := h.Write(main.Pop())
+		if err != nil {
+			return err
+		}
+		main.PushSlice(h.Sum(nil))
+	case OP_SHA1:
+		sum := sha1.Sum(main.Pop())
+		main.PushSlice(sum[:])
+	case OP_SHA256:
+		sum := sha256.Sum256(main.Pop())
+		main.PushSlice(sum[:])
+	case OP_HASH160:
+		h1 := sha256.New()
+		_, err := h1.Write(main.Pop())
+		if err != nil {
+			return err
+		}
+		h2 := ripemd160.New()
+		_, err = h2.Write(h1.Sum(nil))
+		if err != nil {
+			return err
+		}
+		main.PushSlice(h2.Sum(nil))
+	case OP_HASH256:
+		h1 := sha256.New()
+		_, err := h1.Write(main.Pop())
+		if err != nil {
+			return err
+		}
+		h2 := sha256.New()
+		_, err = h2.Write(h1.Sum(nil))
+		if err != nil {
+			return err
+		}
+		main.PushSlice(h2.Sum(nil))
+	default:
+		return fmt.Errorf("0x%02x not a Script Crypto op", op)
 	}
 	return nil
 }

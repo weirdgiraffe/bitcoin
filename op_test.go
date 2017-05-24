@@ -217,3 +217,68 @@ func TestOpBitwise(t *testing.T) {
 		}
 	}
 }
+
+func TestOpArithmetic(t *testing.T) {
+	tt := []struct {
+		op           byte
+		in, expected *stack
+		expect_err   bool
+	}{
+		{OP_1ADD, StackWithValues("01"), StackWithValues("02"), false},
+		{OP_1SUB, StackWithValues("01"), StackWithValues("00"), false},
+		{OP_NEGATE, StackWithValues("01"), StackWithValues("81"), false},
+		{OP_ABS, StackWithValues("81"), StackWithValues("01"), false},
+		{OP_NOT, StackWithValues("01"), StackWithValues("00"), false},
+		{OP_NOT, StackWithValues("00"), StackWithValues("01"), false},
+		{OP_NOT, StackWithValues("02"), StackWithValues("00"), false},
+		{OP_0NOTEQUAL, StackWithValues("00"), StackWithValues("00"), false},
+		{OP_0NOTEQUAL, StackWithValues("ab"), StackWithValues("01"), false},
+		{OP_ADD, StackWithValues("01", "02"), StackWithValues("03"), false},
+		{OP_SUB, StackWithValues("03", "01"), StackWithValues("02"), false},
+		{OP_BOOLAND, StackWithValues("ab", "cd"), StackWithValues("01"), false},
+		{OP_BOOLAND, StackWithValues("34", "00"), StackWithValues("00"), false},
+		{OP_BOOLAND, StackWithValues("00", "00"), StackWithValues("00"), false},
+		{OP_BOOLOR, StackWithValues("ab", "cd"), StackWithValues("01"), false},
+		{OP_BOOLOR, StackWithValues("34", "00"), StackWithValues("01"), false},
+		{OP_BOOLOR, StackWithValues("00", "00"), StackWithValues("00"), false},
+		{OP_NUMEQUAL, StackWithValues("0102", "0102"), StackWithValues("01"), false},
+		{OP_NUMEQUAL, StackWithValues("01", "02"), StackWithValues("00"), false},
+		{OP_NUMEQUALVERIFY, StackWithValues("01", "01"), StackWithValues(), false},
+		{OP_NUMEQUALVERIFY, StackWithValues("01", "02"), StackWithValues(), true},
+		{OP_NUMNOTEQUAL, StackWithValues("0102", "0102"), StackWithValues("00"), false},
+		{OP_NUMNOTEQUAL, StackWithValues("01", "02"), StackWithValues("01"), false},
+		{OP_LESSTHAN, StackWithValues("01", "02"), StackWithValues("01"), false},
+		{OP_LESSTHAN, StackWithValues("02", "01"), StackWithValues("00"), false},
+		{OP_GREATERTHAN, StackWithValues("01", "02"), StackWithValues("00"), false},
+		{OP_GREATERTHAN, StackWithValues("02", "01"), StackWithValues("01"), false},
+		{OP_LESSTHANOREQUAL, StackWithValues("02", "01"), StackWithValues("00"), false},
+		{OP_LESSTHANOREQUAL, StackWithValues("01", "01"), StackWithValues("01"), false},
+		{OP_LESSTHANOREQUAL, StackWithValues("01", "02"), StackWithValues("01"), false},
+		{OP_GREATERTHANOREQUAL, StackWithValues("01", "02"), StackWithValues("00"), false},
+		{OP_GREATERTHANOREQUAL, StackWithValues("01", "01"), StackWithValues("01"), false},
+		{OP_GREATERTHANOREQUAL, StackWithValues("02", "01"), StackWithValues("01"), false},
+		{OP_MIN, StackWithValues("01", "02"), StackWithValues("01"), false},
+		{OP_MAX, StackWithValues("01", "02"), StackWithValues("02"), false},
+		{OP_WITHIN, StackWithValues("01", "00", "02"), StackWithValues("01"), false},
+		{OP_WITHIN, StackWithValues("00", "00", "02"), StackWithValues("01"), false},
+		{OP_WITHIN, StackWithValues("03", "00", "02"), StackWithValues("00"), false},
+		{OP_WITHIN, StackWithValues("02", "00", "02"), StackWithValues("00"), false},
+	}
+	alt := &stack{}
+	for i := range tt {
+		alt.Reset()
+		err := OpArithmetic(tt[i].op, tt[i].in, alt)
+		if err != nil && tt[i].expect_err == false {
+			t.Fatalf("case #%d error: %v", i+1, err)
+		}
+		if compareStack(tt[i].in, tt[i].expected) != 0 {
+			t.Errorf("case #%d main stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].expected)
+			t.Errorf("got[\n%s]", tt[i].in)
+		}
+		if alt.ItemsCount().Int() != 0 {
+			t.Errorf("case #%d alt stack has items", i+1)
+			t.Errorf("\n%s", alt)
+		}
+	}
+}

@@ -203,6 +203,16 @@ func OpBitwise(op byte, main, alt *stack) error {
 	return nil
 }
 
+// OpArithmetic implements all script operations that are Arithmetic
+// check https://en.bitcoin.it/wiki/Script#Arithmetic
+func OpArithmetic(op byte, main, alt *stack) error {
+	switch op {
+	default:
+		return fmt.Errorf("0x%02x not a Script Arithmetic op", op)
+	}
+	return nil
+}
+
 const (
 	OP_0         = 0x00
 	OP_FALSE     = OP_0

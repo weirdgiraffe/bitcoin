@@ -63,7 +63,14 @@ func ScriptIntFromSlice(b []byte) *ScriptInt {
 		s.val |= (int64(b[i]) << offt)
 		offt += 8
 	}
+	if ((int64(0x80)<<offt)&s.val) > 0 && (s.val > 0) {
+		s.val = -s.val
+	}
 	return s
+}
+
+func (s ScriptInt) Int64() int64 {
+	return s.val
 }
 
 func (s ScriptInt) Int() int {
@@ -77,8 +84,11 @@ func (s ScriptInt) Bytes() []byte {
 		b[i] = byte((s.val >> offt) & 0xff)
 		offt += 8
 		if b[i] == 0 {
+			if i == 0 {
+				return []byte{0}
+			}
 			return b[:i]
 		}
 	}
-	return []byte{}
+	return b
 }

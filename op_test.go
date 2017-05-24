@@ -264,17 +264,22 @@ func TestOpArithmetic(t *testing.T) {
 		{OP_WITHIN, StackWithValues("03", "00", "02"), StackWithValues("00"), false},
 		{OP_WITHIN, StackWithValues("02", "00", "02"), StackWithValues("00"), false},
 	}
+	main := &stack{}
 	alt := &stack{}
 	for i := range tt {
 		alt.Reset()
-		err := OpArithmetic(tt[i].op, tt[i].in, alt)
+		main.i = tt[i].in.i
+		copy(main.item[:], tt[i].in.item[:])
+		err := OpArithmetic(tt[i].op, main, alt)
 		if err != nil && tt[i].expect_err == false {
 			t.Fatalf("case #%d error: %v", i+1, err)
 		}
-		if compareStack(tt[i].in, tt[i].expected) != 0 {
-			t.Errorf("case #%d main stack mismatch", i+1)
-			t.Errorf("expected[\n%s]", tt[i].expected)
-			t.Errorf("got[\n%s]", tt[i].in)
+		if compareStack(main, tt[i].expected) != 0 {
+			t.Errorf("case #%d main stack mismatch\n"+
+				"opcode: %s, input stack:[\n%s]\n"+
+				"expected[\n%s]\n"+
+				"got[\n%s]",
+				i+1, OpcodeName(tt[i].op), tt[i].in, tt[i].expected, main)
 		}
 		if alt.ItemsCount().Int() != 0 {
 			t.Errorf("case #%d alt stack has items", i+1)

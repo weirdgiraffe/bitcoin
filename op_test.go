@@ -161,3 +161,29 @@ func TestOpStack(t *testing.T) {
 		}
 	}
 }
+
+func TestOpSplice(t *testing.T) {
+	tt := []struct {
+		op           byte
+		in, expected *stack
+	}{
+		{OP_SIZE, StackWithValues("0102030405"), StackWithValues("0102030405", "05")},
+	}
+	alt := &stack{}
+	for i := range tt {
+		alt.Reset()
+		err := OpSplice(tt[i].op, tt[i].in, alt)
+		if err != nil {
+			t.Fatalf("case #%d error: %v", i+1, err)
+		}
+		if compareStack(tt[i].in, tt[i].expected) != 0 {
+			t.Errorf("case #%d main stack mismatch", i+1)
+			t.Errorf("expected[\n%s]", tt[i].expected)
+			t.Errorf("got[\n%s]", tt[i].in)
+		}
+		if alt.ItemsCount().Int() != 0 {
+			t.Errorf("case #%d alt stack has items", i+1)
+			t.Errorf("\n%s", alt)
+		}
+	}
+}

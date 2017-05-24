@@ -38,7 +38,7 @@ func OpConstants(op byte, script []byte, s *stack) (n int, err error) {
 		b := op - OP_1 + 1
 		s.PushByte(b)
 	default:
-		err = fmt.Errorf("0x%02x not a Script Constants op")
+		err = fmt.Errorf("0x%02x not a Script Constants op", op)
 	}
 	return
 }
@@ -156,7 +156,21 @@ func OpStack(op byte, main, alt *stack) error {
 		main.PushSlice(b1)
 		main.PushSlice(b2)
 	default:
-		return fmt.Errorf("0x%02x not a Script Stack op")
+		return fmt.Errorf("0x%02x not a Script Stack op", op)
+	}
+	return nil
+}
+
+// OpSplice implements all script operations that are Splice
+// check https://en.bitcoin.it/wiki/Script#Splice
+func OpSplice(op byte, main, alt *stack) error {
+	switch op {
+	case OP_SIZE:
+		b1 := main.Top()
+		n := ScriptInt{int64(len(b1))}
+		main.PushSlice(n.Bytes())
+	default:
+		return fmt.Errorf("0x%02x not a Script Splice op", op)
 	}
 	return nil
 }

@@ -11,18 +11,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
+	"os"
 )
-
-type UnixTime uint32
-type Hash [32]byte
-type DoubleHash [32]byte
-
-type Block struct {
-	Header  BlockHeader
-	TxCount Varint
-}
 
 type BlockHeader struct {
 	Version    uint32
@@ -33,76 +27,13 @@ type BlockHeader struct {
 	Nonce      uint32
 }
 
-type TxIn struct {
-	PrevTx        DoubleHash
-	PrevTxOutIndx uint32
-	ScriptLen     Varint
-	Script        []byte
-	SequenceNum   uint32
-}
+const BlockHeaderSize = 80
 
-type TxOut struct {
-	Value     [8]byte
-	ScriptLen Varint
-	Script    []byte
-}
+var BadMagic = errors.New("Bad block magic number")
 
-type Tx struct {
-	Verssion uint32
-	CountIn  Varint
-	In       []TxIn
-	CountOut Varint
-	Out      []TxOut
-	LockTime uint32
-}
-
-// IsCoinbase return true if this transaction is a generation transaction
-// i.e. input for this transaction is a new generated block
-func (t Tx) IsCoinbase() bool {
-	null := DoubleHash{}
-	return len(t.In) == 1 && bytes.Compare(null[:], t.In[0].PrevTx[:]) == 0
-}
-
-func LoadBlock(r io.Reader) (b *Block, err error) {
-	err = verifyMagicNumber(r)
-	if err != nil {
-		return
-	}
-
-	var bLen uint32
-	err = binary.Read(r, binary.LittleEndian, &bLen)
-	if err != nil {
-		return
-	}
-
-	b = &Block{}
-	err = binary.Read(r, binary.LittleEndian, &b.Header)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ReadVarint(r, &b.TxCount)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-func verifyMagicNumber(r io.Reader) error {
-	var magic = [4]byte{0xf9, 0xbe, 0xb4, 0xd9}
-	var m [4]byte
-	n, err := r.Read(m[:])
-	if err != nil {
-		return err
-	}
-	if n != 4 {
-		return fmt.Errorf("failed to read magic")
-	}
-	if bytes.Compare(m[:], magic[:]) != 0 {
-		return fmt.Errorf("magic not match %v != %v", magic, m)
-	}
-	return nil
+type Block struct {
+	Header BlockHeader
+	Tx     []Tx
 }
 
 func (b Block) String() string {
@@ -113,13 +44,106 @@ func (b Block) String() string {
 	return string(ob)
 }
 
-func (h *Hash) MarshalJSON() ([]byte, error) {
-	fmt.Println("here")
-	s := "\""
-	for _, b := range h {
-		s += fmt.Sprintf("%02x", b)
-	}
-	s += "\""
-	return []byte(s), nil
+type BlockFile struct {
+	block []int64
+	f     *os.File
+}
 
+func OpenBlockFile(path string) (b *BlockFile, err error) {
+	b = new(BlockFile)
+	b.f, err = os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	err = b.indexBlocks()
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (b *BlockFile) Close() {
+	if b.f != nil {
+		err := b.f.Close()
+		if err != nil {
+			log.Printf("Error closing BlockFile: %v", err)
+		}
+	}
+}
+
+func (b *BlockFile) BlockCount() int {
+	return len(b.block)
+}
+
+func (b *BlockFile) Block(index int) (*Block, error) {
+	if index >= 0 && index < len(b.block) {
+		ret, err := b.readBlock(b.block[index])
+		if err != nil {
+			return nil, err
+		}
+		return ret, nil
+	}
+	return nil, fmt.Errorf("Bad block index %d (from %d blocks)", index, len(b.block))
+}
+
+func (b *BlockFile) indexBlocks() (err error) {
+	var offt int64
+	for {
+		err = checkMagic(b.f)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return
+		}
+		b.block = append(b.block, offt)
+		var bLen uint32
+		err = binary.Read(b.f, binary.LittleEndian, &bLen)
+		if err != nil {
+			return
+		}
+		offt, err = b.f.Seek(int64(bLen), os.SEEK_CUR)
+		if err != nil {
+			return
+		}
+	}
+}
+
+func (b *BlockFile) readBlock(offt int64) (ret *Block, err error) {
+	// magic number and length are already checked in indexBlocks()
+	_, err = b.f.Seek(offt+4+4, os.SEEK_SET)
+	if err != nil {
+		return
+	}
+	ret = &Block{}
+	err = binary.Read(b.f, binary.LittleEndian, &ret.Header)
+	if err != nil {
+		return
+	}
+	var txCount Varint
+	err = ReadVarint(b.f, &txCount)
+	if err != nil {
+		return
+	}
+	for i := Varint(txCount); i > 0; i-- {
+		var tx *Tx
+		tx, err = ReadTx(b.f)
+		if err != nil {
+			return
+		}
+		ret.Tx = append(ret.Tx, *tx)
+	}
+	return ret, nil
+}
+
+func checkMagic(r io.Reader) (err error) {
+	var b [4]byte
+	_, err = r.Read(b[:])
+	if err != nil {
+		return
+	}
+	if bytes.Compare([]byte{0xf9, 0xbe, 0xb4, 0xd9}, b[:]) != 0 {
+		return BadMagic
+	}
+	return nil
 }

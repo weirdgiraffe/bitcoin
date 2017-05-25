@@ -15,6 +15,50 @@ import (
 
 type Varint uint64
 
+func (v Varint) OutSize() int {
+	switch {
+	case v < 0xfd:
+
+		return 1
+	case v < 0xffff:
+		return 3
+	case v < 0xffffffff:
+		return 5
+	default:
+		return 9
+	}
+}
+
+func WriteVarint(w io.Writer, u Varint) (err error) {
+	switch {
+	case u < 0xfd:
+		v := byte(0xff & u)
+		_, err = w.Write([]byte{v})
+		if err != nil {
+			return
+		}
+	case u < 0xffff:
+		v := uint16(u)
+		err = binary.Write(w, binary.LittleEndian, &v)
+		if err != nil {
+			return
+		}
+	case u < 0xffffffff:
+		v := uint32(u)
+		err = binary.Write(w, binary.LittleEndian, &v)
+		if err != nil {
+			return
+		}
+	default:
+		v := uint64(u)
+		err = binary.Write(w, binary.LittleEndian, &v)
+		if err != nil {
+			return
+		}
+	}
+	return nil
+}
+
 func ReadVarint(r io.Reader, u *Varint) (err error) {
 	b := []byte{0}
 	_, err = r.Read(b)
@@ -38,7 +82,7 @@ func ReadVarint(r io.Reader, u *Varint) (err error) {
 		*u = Varint(w)
 	case 0xff:
 		var dw uint64
-		err = binary.Read(r, binary.LittleEndian, r)
+		err = binary.Read(r, binary.LittleEndian, &dw)
 		if err != nil {
 			return
 		}
@@ -46,7 +90,7 @@ func ReadVarint(r io.Reader, u *Varint) (err error) {
 	default:
 		*u = Varint(b[0])
 	}
-	return
+	return nil
 }
 
 type ScriptInt struct {

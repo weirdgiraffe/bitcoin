@@ -32,6 +32,10 @@ func TestTxSerialisation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	nullHash := DoubleHash{}
+	if bytes.Compare(tx.Hash[:], nullHash[:]) == 0 {
+		t.Errorf("tx has a null hash")
+	}
 	b := tx.Raw()
 	if bytes.Compare(rawTx, b) != 0 {
 		t.Errorf("serialized tx not match input tx:\ninput:\n%s\nserialized:\n%s", hex.Dump(rawTx), hex.Dump(b))

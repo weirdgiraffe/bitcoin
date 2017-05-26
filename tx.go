@@ -21,23 +21,18 @@ type TxIn struct {
 	SequenceNum   uint32
 }
 
-const TxInBaseSize = 40
-
 type TxOut struct {
 	Value  uint64
 	Script []byte
 }
-
-const TxOutBaseSize = 8
 
 type Tx struct {
 	Verssion uint32
 	In       []TxIn
 	Out      []TxOut
 	LockTime uint32
+	Hash     DoubleHash
 }
-
-const TxBaseSize = 8
 
 // IsCoinbase return true if this transaction is a generation transaction
 // i.e. input for this transaction is a new generated block
@@ -127,6 +122,7 @@ func ReadTx(r io.Reader) (t *Tx, err error) {
 	if err != nil {
 		return
 	}
+	t.Hash.Update(t.Raw())
 	return t, nil
 }
 

@@ -33,7 +33,7 @@ var BadMagic = errors.New("Bad block magic number")
 
 type Block struct {
 	Header BlockHeader
-	Tx     []Tx
+	Tx     []*Tx
 }
 
 func (b Block) String() string {
@@ -131,7 +131,7 @@ func (b *BlockFile) readBlock(offt int64) (ret *Block, err error) {
 		if err != nil {
 			return
 		}
-		ret.Tx = append(ret.Tx, *tx)
+		ret.Tx = append(ret.Tx, tx)
 	}
 	return ret, nil
 }

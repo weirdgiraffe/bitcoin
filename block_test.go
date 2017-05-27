@@ -12,7 +12,7 @@ import (
 )
 
 func TestBlockFile(t *testing.T) {
-	bf, err := OpenBlockFile("assets/blk00520.dat")
+	bf, err := OpenBlockFile("assets/testblock.dat")
 	if err != nil {
 		t.Fatal(err)
 	}

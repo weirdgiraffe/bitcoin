@@ -16,14 +16,20 @@ type UnixTime uint32
 type Hash [32]byte
 type DoubleHash [32]byte
 
+func (h Hash) String() string {
+	return hex.EncodeToString(h[:])
+}
+
 func (h Hash) MarshalJSON() ([]byte, error) {
-	s := hex.EncodeToString(h[:])
-	return []byte("\"" + s + "\""), nil
+	return []byte("\"" + h.String() + "\""), nil
 }
 
 func (h DoubleHash) MarshalJSON() ([]byte, error) {
-	s := hex.EncodeToString(h[:])
-	return []byte("\"" + s + "\""), nil
+	return []byte("\"" + h.String() + "\""), nil
+}
+
+func (h DoubleHash) String() string {
+	return hex.EncodeToString(h[:])
 }
 
 func (h *DoubleHash) Update(b []byte) {

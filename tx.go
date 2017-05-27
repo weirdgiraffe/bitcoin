@@ -27,7 +27,7 @@ type TxOut struct {
 }
 
 type Tx struct {
-	Verssion uint32
+	Version  uint32
 	In       []TxIn
 	Out      []TxOut
 	LockTime uint32
@@ -89,7 +89,7 @@ func ReadTxOut(r io.Reader) (t *TxOut, err error) {
 
 func ReadTx(r io.Reader) (t *Tx, err error) {
 	t = new(Tx)
-	err = binary.Read(r, binary.LittleEndian, &t.Verssion)
+	err = binary.Read(r, binary.LittleEndian, &t.Version)
 	if err != nil {
 		return
 	}
@@ -128,7 +128,7 @@ func ReadTx(r io.Reader) (t *Tx, err error) {
 
 func (tx *Tx) Raw() []byte {
 	w := new(bytes.Buffer)
-	err := binary.Write(w, binary.LittleEndian, tx.Verssion)
+	err := binary.Write(w, binary.LittleEndian, tx.Version)
 	if err != nil {
 		panic(err)
 	}

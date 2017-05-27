@@ -1,0 +1,14 @@
+version: "3.0"
+
+volumes:
+    data-volume:
+
+services:
+    bitcoindb:
+        build: db
+        ports:
+            - "127.0.0.1:27017:27017"
+        volumes:
+            - data-volume:/data/db/
+
+

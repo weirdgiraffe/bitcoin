@@ -20,8 +20,8 @@ import (
 
 type BlockHeader struct {
 	Version    uint32
-	PrevBlock  Hash
-	MerkleRoot Hash
+	PrevBlock  DoubleHash
+	MerkleRoot DoubleHash
 	UnixTime   UnixTime
 	Bits       uint32
 	Nonce      uint32
@@ -33,7 +33,8 @@ var BadMagic = errors.New("Bad block magic number")
 
 type Block struct {
 	Header BlockHeader
-	Tx     []*Tx
+	Hash   DoubleHash
+	tx     []*Tx
 }
 
 func (b Block) String() string {
@@ -42,6 +43,14 @@ func (b Block) String() string {
 		panic(err)
 	}
 	return string(ob)
+}
+
+func (b *Block) TxCount() int {
+	return len(b.tx)
+}
+
+func (b *Block) Tx(indx int) *Tx {
+	return b.tx[indx]
 }
 
 type BlockFile struct {
@@ -116,6 +125,16 @@ func (b *BlockFile) readBlock(offt int64) (ret *Block, err error) {
 		return
 	}
 	ret = &Block{}
+	buf := make([]byte, BlockHeaderSize)
+	_, err = b.f.Read(buf)
+	if err != nil {
+		return
+	}
+	ret.Hash.Update(buf)
+	_, err = b.f.Seek(offt+4+4, os.SEEK_SET)
+	if err != nil {
+		return
+	}
 	err = binary.Read(b.f, binary.LittleEndian, &ret.Header)
 	if err != nil {
 		return
@@ -126,12 +145,13 @@ func (b *BlockFile) readBlock(offt int64) (ret *Block, err error) {
 		return
 	}
 	for i := Varint(txCount); i > 0; i-- {
-		var tx *Tx
-		tx, err = ReadTx(b.f)
+		var t *Tx
+		t, err = ReadTx(b.f)
 		if err != nil {
 			return
 		}
-		ret.Tx = append(ret.Tx, tx)
+		t.Block = ret.Hash
+		ret.tx = append(ret.tx, t)
 	}
 	return ret, nil
 }

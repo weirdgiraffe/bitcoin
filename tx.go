@@ -31,7 +31,9 @@ type Tx struct {
 	In       []TxIn
 	Out      []TxOut
 	LockTime uint32
-	Hash     DoubleHash
+
+	Hash  DoubleHash
+	Block DoubleHash
 }
 
 // IsCoinbase return true if this transaction is a generation transaction
